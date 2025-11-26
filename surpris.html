@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Surprise Quiz — Answer to Unlock a Message</title>
+  <style>
+    :root{--bg:#fff;--card:#ffffff;--accent:#ff5a79;--muted:#6b7280}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;color:#111;background:var(--bg);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+    .wrap{max-width:800px;width:100%}
+    .card{background:rgba(255,255,255,0.9);border-radius:16px;padding:26px;box-shadow:0 8px 30px rgba(2,6,23,0.06);border:1px solid rgba(0,0,0,0.04)}
+    h1{margin:0 0 6px;font-size:22px;color:#111}
+    p.lead{margin:0 0 18px;color:var(--muted)}
+    .question{font-size:18px;margin:18px 0}
+    .choices{display:grid;gap:10px}
+    .choice{background:#fff;padding:12px;border-radius:10px;cursor:pointer;border:1px solid rgba(0,0,0,0.06)}
+    .choice:hover{transform:translateY(-2px)}
+    .choice.correct{outline:2px solid rgba(34,197,94,0.18);background:linear-gradient(90deg,rgba(34,197,94,0.06),transparent)}
+    .choice.wrong{outline:2px solid rgba(239,68,68,0.12);background:linear-gradient(90deg,rgba(239,68,68,0.04),transparent)}
+    .controls{display:flex;justify-content:space-between;align-items:center;margin-top:18px}
+    .btn{background:var(--accent);color:white;padding:10px 14px;border-radius:10px;border:none;cursor:pointer}
+    .btn.secondary{background:transparent;border:1px solid rgba(0,0,0,0.06);color:var(--muted)}
+    .progress{height:10px;background:rgba(0,0,0,0.03);border-radius:999px;overflow:hidden}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#ff7b9a);width:0%}
+    .center{display:flex;align-items:center;justify-content:center}
+    .finish{padding:18px;text-align:center}
+    .gift{font-size:20px;margin:12px 0;color:#111}
+    .small{font-size:13px;color:var(--muted)}
+    footer{margin-top:12px;text-align:center;color:var(--muted);font-size:12px}
+
+    /* hearts background when no image */
+    .hearts-bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(circle at 20% 20%, rgba(255,90,121,0.06), transparent 10%), radial-gradient(circle at 80% 80%, rgba(255,90,121,0.05), transparent 10%);}
+    .heart{position:fixed;opacity:0.06;font-size:120px;transform:rotate(-20deg);left:20px;top:40px}
+    .bg-photo{position:fixed;inset:0;z-index:-2;background-size:cover;background-position:center;filter:blur(4px) brightness(0.8)}
+    .overlay{position:fixed;inset:0;z-index:-1;background:linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.85))}
+
+    label.upload{display:inline-block;margin-top:12px}
+    textarea.resp{width:100%;height:80px;padding:10px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);resize:vertical}
+    @media (max-width:600px){.card{padding:18px}.heart{font-size:80px}}
+  </style>
+</head>
+<body>
+  <div class="hearts-bg"><div class="heart">❤</div></div>
+  <div id="photoBg" class="bg-photo" style="display:none"></div>
+  <div class="overlay"></div>
+
+  <div class="wrap">
+    <div class="card" id="app">
+      <h1>Surprise Quiz 🎁</h1>
+      <p class="lead">Answer the questions to unlock a message. Some questions are multiple-choice; later you'll be asked to type answers so I can read them.</p>
+
+      <div id="view"></div>
+      <footer>Save this file as <strong>surprise-quiz.html</strong>, open in a browser, and share the file or upload it to host it.</footer>
+    </div>
+  </div>
+
+<script>
+// --- CONFIG (personalized) ---
+const QUIZ_CONFIG = {
+  questionsToWin: 15,
+  bank: [
+    { text: "Where was I born?", choices: ['Kunnamkulam','Other','City X','Village Y'], correct: 0 },
+    { text: "Who was my favourite actor thaathaaaaa???", choices: ['Mohanlal','Mammootty','Dulquer','Prithviraj'], correct: 0 },
+    { text: "Who made the first move in our relationship?", choices: ['Nanda','You','Friend','Neither'], correct: 0 },
+    { text: "What's my favorite food? (hard)", choices: ['Puttu & Kadala','Biryani','Pizza','Dosa'], correct: 0 },
+    { text: "What's my favourite place (million times)", choices: ['Prague','Paris','Rome','Goa'], correct: 0 },
+    { text: "Who is my Bestfriend??????", choices: ['Najma','Alex','Sam','Taylor'], correct: 0 },
+    { text: "What's my favorite part of your body?", choices: ['Lips','Eyes','Hair','Hands'], correct: 0 },
+    { text: "What are my turn-ons?", choices: ['Voice','Smile','Eyes','Humor'], correct: 0 },
+    { text: "If I had the body of the opposite sex for one day, what would I do?", choices: ['Fingering','Prank','Explore','Relax'], correct: 0 },
+    { text: "What is most important to me in a relationship?", choices: ['Empathy','Trust','Passion','Stability'], correct: 0 },
+    { text: "Where did I go to highschool?", choices: ['Thiruvilwamala','School B','School C','School D'], correct: 0 },
+    { text: "What is my all time favourite game?", choices: ['Assassin\'s Creed','FIFA','Call of Duty','Minecraft'], correct: 0 },
+    { text: "If I have to choose between kiss, sex and cuddle what will I choose?", choices: ['Kiss','Sex','Cuddle','Depends'], correct: 0 },
+    { text: "What is my favourite sport?", choices: ['Cricket','Football','Tennis','Badminton'], correct: 0 },
+    { text: "What's my political leaning?", choices: ['Centre','Left','Right','None'], correct: 0 }
+  ],
+  openQuestions: [
+    "What 's your favourite memory of us together (malayalatthil mathi)",
+    "What kind of touch do you find most arousing?",
+    "What’s the most sensitive part of your body?",
+    "What’s something I do that makes you feel desired?",
+    "What is your favourite colour?",
+    "whats your dream destination?",
+    "Your top priority in order? Love, Lust, Money, Happiness",
+    "What’s one thing you’ve learned from being with me",
+    "Do you feel that I am an emotional baggage?",
+    "On a scale of 10, how insecure are you?",
+    "On a scale of 10, how weak are you in your mind?",
+    "What do you think about relationship? (Friends, soulmates, two clever ones taking advantage of each others)",
+    "Do you think that you are trying to project a good girl image at the expense of other (expecting an Honest one)?",
+    "Do you have a favorite childhood memory?",
+    "How do you describe me to your friends?",
+    "Do you correct yourself or put some genuine effort if I want some change from you?",
+    "What are your boundaries when it comes to relationships (ottum sahikkan pattathathu)?",
+    "Dependent wife at Tirur or Independent girl at somewhere else?",
+    "Loyalty or Emotions?",
+    "Tell me something that you wish to see a change in me?"
+  ],
+  finalMessage: `My life was a collection of moments with you.
+Thank you for just existing.
+Miss you.
+With love 😈`
+};
+// -----------------------------
+
+let state = { order: [], currentIndex:0, score:0, openAnswers: [] };
+function shuffle(a){const b=a.slice();for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}
+function pickQuestions(bank,n){return shuffle(bank).slice(0,n)}
+const view = document.getElementById('view');
+
+function renderStart(){
+  state.order = pickQuestions(QUIZ_CONFIG.bank, QUIZ_CONFIG.questionsToWin);
+  state.currentIndex=0; state.score=0; state.openAnswers=[];
+  view.innerHTML = `
+    <div class="center"><div>
+      <p class="small">Ready for a little game?</p>
+      <div style="margin-top:8px">
+        <label class="upload">Upload a photo to use on the final screen: <input type="file" id="photoInput" accept="image/*"></label>
+      </div>
+      <div style="margin-top:12px"><button class="btn" id="startBtn">Start the Quiz</button> <button class="btn secondary" id="viewAnswers">View answers (owner)</button></div>
+    </div></div>`;
+  document.getElementById('startBtn').onclick = ()=>renderQuestion();
+  document.getElementById('viewAnswers').onclick = ()=>downloadCollectedAnswers();
+  document.getElementById('photoInput').addEventListener('change', handlePhotoUpload);
+  updateProgress();
+}
+
+function handlePhotoUpload(e){
+  const f = e.target.files[0]; if(!f) return; const reader=new FileReader();
+  reader.onload = ()=>{ const url=reader.result; const bg=document.getElementById('photoBg'); bg.style.backgroundImage=`url(${url})`; bg.style.display='block'; document.querySelector('.hearts-bg').style.opacity='0.2'; };
+  reader.readAsDataURL(f);
+}
+
+function renderQuestion(){
+  const q = state.order[state.currentIndex];
+  view.innerHTML = `
+    <div>
+      <div class="progress"><i style="width:${Math.round((state.currentIndex/QUIZ_CONFIG.questionsToWin)*100)}%"></i></div>
+      <div class="question">${escapeHtml(q.text)}</div>
+      <div class="choices" id="choices"></div>
+      <div class="controls"><div class="small">Question ${state.currentIndex+1} of ${QUIZ_CONFIG.questionsToWin}</div><div><button class="btn secondary" id="restart">Restart</button></div></div>
+    </div>`;
+  const choicesEl = document.getElementById('choices');
+  q.choices.forEach((c,i)=>{const d=document.createElement('div');d.className='choice';d.tabIndex=0;d.textContent=c;d.onclick=()=>handleChoice(i);choicesEl.appendChild(d)});
+  document.getElementById('restart').onclick = renderStart;
+  updateProgress();
+}
+
+function handleChoice(choiceIndex){
+  const q = state.order[state.currentIndex];
+  const nodes = document.querySelectorAll('.choice');
+  nodes.forEach((n,i)=>{n.style.pointerEvents='none'; if(i===q.correct) n.classList.add('correct'); if(i===choiceIndex && i!==q.correct) n.classList.add('wrong');});
+  if(choiceIndex===q.correct){ state.score++; setTimeout(()=>{ state.currentIndex++; if(state.currentIndex>=QUIZ_CONFIG.questionsToWin) renderOpenQuestions(); else renderQuestion(); },800);} else { setTimeout(()=>{ document.querySelectorAll('.choice').forEach(n=>n.style.pointerEvents='auto'); },800); }
+  updateProgress();
+}
+
+function renderOpenQuestions(){
+  view.innerHTML = `<div><div class="question">A few personal questions — please answer honestly</div><div id="openList"></div><div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px"><button class="btn secondary" id="skipOpen">Skip</button><button class="btn" id="submitOpen">Submit</button></div></div>`;
+  const list = document.getElementById('openList');
+  QUIZ_CONFIG.openQuestions.forEach((q,i)=>{ const wrap=document.createElement('div'); wrap.style.marginTop='10px'; const label=document.createElement('div'); label.className='small'; label.textContent = (i+1)+'. '+q; const ta=document.createElement('textarea'); ta.className='resp'; ta.id='open-'+i; wrap.appendChild(label); wrap.appendChild(ta); list.appendChild(wrap);} );
+  document.getElementById('submitOpen').onclick = () => { for(let i=0;i<QUIZ_CONFIG.openQuestions.length;i++){ state.openAnswers[i] = document.getElementById('open-'+i).value || ''; } renderFinish(); };
+  document.getElementById('skipOpen').onclick = renderFinish;
+}
+
+function renderFinish(){
+  view.innerHTML = `
+    <div class="finish">
+      <div class="gift">${escapeHtml(QUIZ_CONFIG.finalMessage).replace(/
+/g,'<br>')}</div>
+      <div style="margin-top:14px"><button class="btn" id="downloadBtn">Save Answers (owner)</button> <button class="btn secondary" id="playAgain">Play again</button></div>
+    </div>`;
+  document.getElementById('downloadBtn').onclick = downloadCollectedAnswers;
+  document.getElementById('playAgain').onclick = renderStart;
+  updateProgress(100);
+  // small visual flourish
+  setTimeout(()=>{ const card = document.querySelector('.card'); card.style.transform='scale(1.01)'; setTimeout(()=>card.style.transform='',400); },200);
+}
+
+function downloadCollectedAnswers(){
+  // compile answers: which choices user picked? We only recorded score; but openAnswers are saved.
+  const lines = [];
+  lines.push('----- Quiz: multiple choice questions (correct answers are known) -----');
+  QUIZ_CONFIG.bank.forEach((q,i)=>{ lines.push((i+1)+'. '+q.text+' (correct: '+q.choices[q.correct]+')'); });
+  lines.push('
+----- Open answers provided by the player -----');
+  QUIZ_CONFIG.openQuestions.forEach((q,i)=>{ lines.push((i+1)+'. '+q); lines.push('Answer: '+(state.openAnswers[i]||' (no answer)')); lines.push(''); });
+  const blob = new Blob([lines.join('
+')], {type:'text/plain'});
+  const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='collected-answers.txt'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+function updateProgress(completePercent){ const p = document.querySelector('.progress > i'); const percent = completePercent!==undefined?completePercent:Math.round((state.score/QUIZ_CONFIG.questionsToWin)*100); if(p) p.style.width = percent+'%'; }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]}); }
+
+// start
+renderStart();
+</script>
+</body>
+</html>
